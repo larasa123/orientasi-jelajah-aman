@@ -84,7 +84,6 @@ export default function HalamanUtama() {
       setCuaca(dataCuaca);
       setKualitasUdara(dataAQI);
     } catch {
-      // Abaikan error dari permintaan yang sudah tidak terbaru
       if (idSaatIni !== requestIdRef.current) return;
 
       setPesanError(
@@ -145,10 +144,23 @@ export default function HalamanUtama() {
           />
         )}
 
+        {cuaca && (
+        <Text>
+          Suhu hari ini: {cuaca.harian.suhuMinimal[0]}°C -{" "}
+          {cuaca.harian.suhuMaksimal[0]}°C
+        </Text>
+      )}
+
       {cuaca && (
         <Text style={{ fontSize: 12, color: "#888" }}>
           Kondisi: {labelKodeCuaca(cuaca.saatIni.kodeCuaca)} •
           Angin {cuaca.saatIni.kecepatanAngin} km/j
+        </Text>
+      )}
+
+      {kualitasUdara && (
+        <Text style={{ fontSize: 12, color: "#888" }}>
+          PM2.5: {kualitasUdara.pm25} • PM10: {kualitasUdara.pm10}
         </Text>
       )}
 
