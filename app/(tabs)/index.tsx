@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from "react";
 import {
   View,
@@ -17,6 +18,10 @@ import { cariKota } from "../../services/geocodingService";
 import { ambilCuaca } from "../../services/weatherService";
 import { ambilKualitasUdara } from "../../services/airQualityService";
 import { konversiTingkatAQI } from "../../services/weatherAdapter";
+import {
+  mintaIzinLokasi,
+  ambilKoordinatSaatIni,
+} from "../../services/locationService";
 import { labelKodeCuaca } from "../../constants/weatherCodes";
 
 import { HasilGeocoding } from "../../types/geocoding";
@@ -46,9 +51,12 @@ export default function HalamanUtama() {
   const [pesanError, setPesanError] =
     useState<string | null>(null);
 
+  const [pesanLokasi, setPesanLokasi] =
+    useState<string | null>(null);
+
   const teksTertunda = useDebounce(teksCari, 500);
 
-  // Penanda nomor permintaan untuk mencegah race condition
+  // Mencegah hasil permintaan lama menimpa hasil terbaru
   const requestIdRef = useRef(0);
 
   useEffect(() => {
@@ -66,7 +74,6 @@ export default function HalamanUtama() {
   async function pilihKota(kota: HasilGeocoding) {
     setKotaTerpilih(kota);
 
-    // Setiap permintaan mendapatkan nomor urut baru
     const idSaatIni = ++requestIdRef.current;
 
     setSedangMemuat(true);
@@ -78,7 +85,6 @@ export default function HalamanUtama() {
         ambilKualitasUdara(kota.latitude, kota.longitude),
       ]);
 
-      // Jika ada permintaan yang lebih baru, hasil ini diabaikan
       if (idSaatIni !== requestIdRef.current) return;
 
       setCuaca(dataCuaca);
@@ -96,6 +102,42 @@ export default function HalamanUtama() {
     }
   }
 
+  async function gunakanLokasiSaatIni() {
+    try {
+      setPesanLokasi(null);
+
+      const status = await mintaIzinLokasi();
+
+      if (status === "denied") {
+        setPesanLokasi(
+          "Izin lokasi ditolak. Silakan cari kota secara manual di atas."
+        );
+        return;
+      }
+
+      if (status === "unavailable") {
+        setPesanLokasi(
+          "Layanan lokasi tidak aktif diprangkat ini. Silakan cari kota secara manual."
+        );
+        return;
+      }
+
+      const koordinat = await ambilKoordinatSaatIni();
+
+      await pilihKota({
+        id: -1,
+        name: "Lokasi Saat Ini",
+        latitude: koordinat.latitude,
+        longitude: koordinat.longitude,
+        country: "",
+      });
+    } catch {
+      setPesanLokasi(
+        "Gagal mendapatkan lokasi. Silakan cari kota secara manual."
+      );
+    }
+  }
+
   return (
     <SafeAreaView
       style={{
@@ -105,6 +147,17 @@ export default function HalamanUtama() {
       }}
     >
       <SearchBox onCari={setTeksCari} />
+
+      <Button
+        title="Gunakan Lokasi Saat Ini"
+        onPress={gunakanLokasiSaatIni}
+      />
+
+      {pesanLokasi && (
+        <Text style={{ color: "red" }}>
+          {pesanLokasi}
+        </Text>
+      )}
 
       {hasilPencarian.map((kota) => (
         <TouchableOpacity
@@ -144,7 +197,7 @@ export default function HalamanUtama() {
           />
         )}
 
-        {cuaca && (
+      {cuaca && (
         <Text>
           Suhu hari ini: {cuaca.harian.suhuMinimal[0]}°C -{" "}
           {cuaca.harian.suhuMaksimal[0]}°C
