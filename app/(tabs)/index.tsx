@@ -1,4 +1,4 @@
-
+import { router } from "expo-router";
 import { useState, useEffect, useRef } from "react";
 import {
   View,
@@ -117,7 +117,7 @@ export default function HalamanUtama() {
 
       if (status === "unavailable") {
         setPesanLokasi(
-          "Layanan lokasi tidak aktif diprangkat ini. Silakan cari kota secara manual."
+          "Layanan lokasi tidak aktif di perangkat ini. Silakan cari kota secara manual."
         );
         return;
       }
@@ -187,14 +187,31 @@ export default function HalamanUtama() {
         kualitasUdara &&
         kotaTerpilih &&
         !sedangMemuat && (
-          <WeatherCard
-            kota={kotaTerpilih.name}
-            suhu={cuaca.saatIni.suhu}
-            tingkatAQI={konversiTingkatAQI(
-              kualitasUdara.indeksAQI
-            )}
-            indeksAQI={kualitasUdara.indeksAQI}
-          />
+          <>
+            <WeatherCard
+              kota={kotaTerpilih.name}
+              suhu={cuaca.saatIni.suhu}
+              tingkatAQI={konversiTingkatAQI(
+                kualitasUdara.indeksAQI
+              )}
+              indeksAQI={kualitasUdara.indeksAQI}
+            />
+
+            <Button
+              title="Tambahkan ke Favorit"
+              onPress={() =>
+                router.push({
+                  pathname: "/tambah-favorit",
+                  params: {
+                    id: String(kotaTerpilih.id),
+                    nama: kotaTerpilih.name,
+                    lat: String(kotaTerpilih.latitude),
+                    lon: String(kotaTerpilih.longitude),
+                  },
+                })
+              }
+            />
+          </>
         )}
 
       {cuaca && (
