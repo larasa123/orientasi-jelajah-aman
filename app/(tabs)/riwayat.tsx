@@ -1,6 +1,5 @@
-
 import { useState, useCallback } from "react";
-import { View, Text, Button } from "react-native";
+import { View, Text, Button, Alert, Platform } from "react-native";
 import { useFocusEffect } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -20,6 +19,36 @@ export default function TabRiwayat() {
     }, [])
   );
 
+ function konfirmasiHapus(kota: KotaFavorit) {
+  if (Platform.OS === "web") {
+    const yakin = window.confirm(`Yakin hapus ${kota.nama}?`);
+
+    if (yakin) {
+      hapus(kota.id);
+    }
+
+    return;
+  }
+
+  Alert.alert(
+    "Konfirmasi Hapus",
+    `Yakin hapus ${kota.nama}?`,
+    [
+      {
+        text: "Batal",
+        style: "cancel",
+      },
+      {
+        text: "Hapus",
+        style: "destructive",
+        onPress: () => {
+          hapus(kota.id);
+        },
+      },
+    ]
+  );
+}
+
   async function hapus(id: number) {
     await hapusFavorit(id);
     setDaftarFavorit((prev) => prev.filter((k) => k.id !== id));
@@ -29,6 +58,10 @@ export default function TabRiwayat() {
     <SafeAreaView style={{ flex: 1, padding: 16, gap: 12 }}>
       <Text style={{ fontSize: 18, fontWeight: "bold" }}>
         Kota Favorit
+      </Text>
+
+      <Text>
+        Tersimpan {daftarFavorit.length} kota
       </Text>
 
       {daftarFavorit.length === 0 && (
@@ -45,7 +78,10 @@ export default function TabRiwayat() {
           }}
         >
           <Text>{kota.nama}</Text>
-          <Button title="Hapus" onPress={() => hapus(kota.id)} />
+          <Button
+            title="Hapus"
+            onPress={() => konfirmasiHapus(kota)}
+          />
         </View>
       ))}
     </SafeAreaView>

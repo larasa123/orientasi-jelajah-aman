@@ -1,5 +1,5 @@
-import { router } from "expo-router";
-import { useState, useEffect, useRef } from "react";
+import { router, useFocusEffect } from "expo-router";
+import { useState, useEffect, useRef, useCallback } from "react";
 import {
   View,
   Text,
@@ -23,12 +23,14 @@ import {
   ambilKoordinatSaatIni,
 } from "../../services/locationService";
 import { labelKodeCuaca } from "../../constants/weatherCodes";
+import { ambilSemuaFavorit } from "../../services/favoritStorage";
 
 import { HasilGeocoding } from "../../types/geocoding";
 import {
   DataCuacaLengkap,
   DataKualitasUdara,
 } from "../../types/weather";
+import { KotaFavorit } from "../../types/favorit";
 
 export default function HalamanUtama() {
   const [teksCari, setTeksCari] = useState("");
@@ -46,6 +48,9 @@ export default function HalamanUtama() {
   const [kualitasUdara, setKualitasUdara] =
     useState<DataKualitasUdara | null>(null);
 
+  const [daftarFavorit, setDaftarFavorit] =
+    useState<KotaFavorit[]>([]);
+
   const [sedangMemuat, setSedangMemuat] = useState(false);
 
   const [pesanError, setPesanError] =
@@ -58,6 +63,36 @@ export default function HalamanUtama() {
 
   // Mencegah hasil permintaan lama menimpa hasil terbaru
   const requestIdRef = useRef(0);
+
+  // Memuat ulang daftar favorit saat halaman Beranda aktif
+  useFocusEffect(
+    useCallback(() => {
+      let masihAktif = true;
+
+      ambilSemuaFavorit()
+        .then((favorit) => {
+          if (masihAktif) {
+            setDaftarFavorit(favorit);
+          }
+        })
+        .catch(() => {
+          if (masihAktif) {
+            setDaftarFavorit([]);
+          }
+        });
+
+      return () => {
+        masihAktif = false;
+      };
+    }, [])
+  );
+
+  // Mengecek apakah kota terpilih sudah menjadi favorit
+  const sudahFavorit =
+    kotaTerpilih !== null &&
+    daftarFavorit.some(
+      (kota) => kota.id === kotaTerpilih.id
+    );
 
   useEffect(() => {
     if (teksTertunda.trim().length === 0) {
@@ -197,20 +232,28 @@ export default function HalamanUtama() {
               indeksAQI={kualitasUdara.indeksAQI}
             />
 
-            <Button
-              title="Tambahkan ke Favorit"
-              onPress={() =>
-                router.push({
-                  pathname: "/tambah-favorit",
-                  params: {
-                    id: String(kotaTerpilih.id),
-                    nama: kotaTerpilih.name,
-                    lat: String(kotaTerpilih.latitude),
-                    lon: String(kotaTerpilih.longitude),
-                  },
-                })
-              }
-            />
+            {!sudahFavorit && (
+              <Button
+                title="Tambahkan ke Favorit"
+                onPress={() =>
+                  router.push({
+                    pathname: "/tambah-favorit",
+                    params: {
+                      id: String(kotaTerpilih.id),
+                      nama: kotaTerpilih.name,
+                      lat: String(kotaTerpilih.latitude),
+                      lon: String(kotaTerpilih.longitude),
+                    },
+                  })
+                }
+              />
+            )}
+
+            {sudahFavorit && (
+              <Text style={{ color: "green" }}>
+                Kota ini sudah tersimpan di favorit.
+              </Text>
+            )}
           </>
         )}
 
